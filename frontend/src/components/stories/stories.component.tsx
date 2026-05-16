@@ -30,12 +30,18 @@ const StoriesComponent = () => {
   const [guestRequestCount, setGuestRequestCount] = useState<number>(() =>
     parseInt(localStorage.getItem("guestRequestCount") || "0", 10)
   );
+  const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
 
   useEffect(() => {
     setValue("prompt", textareaValue);
   }, [textareaValue, setValue]);
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
+    if (!login && guestRequestCount >= 3) {
+      setShowLimitModal(true);
+      return;
+    }
+
     if (data.prompt === "") {
       toast.error("Please enter a prompt to generate a story.");
       return;
@@ -195,6 +201,37 @@ const StoriesComponent = () => {
         setStories={setStories}
       />
       <div className="absolute top-[-200px] left-[250px] w-[800px] h-[350px] bg-blue-500/20 rounded-full blur-3xl -z-10"></div>
+
+      {showLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#0f172a] border border-white/10 rounded-2xl shadow-[0_0_15px_rgba(59,130,246,0.5)] max-w-md w-full p-6 transform transition-all">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-lock text-2xl text-blue-400"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-200 mb-2">Free Limit Reached</h3>
+              <p className="text-gray-400 mb-6 leading-relaxed">
+                You’ve used all 3 free story generations. Login to continue creating more stories.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Link
+                  to="/login"
+                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-indigo-500/25"
+                >
+                  Login
+                </Link>
+                <button
+                  onClick={() => setShowLimitModal(false)}
+                  className="w-full bg-transparent hover:bg-white/5 text-gray-400 hover:text-gray-300 font-medium py-3 px-4 rounded-xl transition-all"
+                >
+                  Continue Browsing
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Toaster position="top-right" reverseOrder={false} />
     </div>
   );
