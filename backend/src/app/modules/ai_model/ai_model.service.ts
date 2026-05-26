@@ -6,9 +6,14 @@ import { IAIModel, IAlternateEndingPayload } from "./ai_model.interface";
 import { generateWithGeminiStories, generateAlternateEndingsWithGemini } from "./ai_model.utils";
 import httpStatus from "http-status";
 import { REQUEST_LIMITS } from "../../../interfaces/ai_model_request_limit";
+import { QuotaRefundGuard } from "../../middleware/check.request.limit";
 
 
-const aiModelGenerate = async (payload: IAIModel, token: ITokenPayload) => {
+const aiModelGenerate = async (
+  payload: IAIModel,
+  token: ITokenPayload,
+  refundGuard?: QuotaRefundGuard
+) => {
   const { email } = token;
   const { prompt, wordLength, numStories } = payload;
 
@@ -64,16 +69,21 @@ const aiModelGenerate = async (payload: IAIModel, token: ITokenPayload) => {
     return result;
   } catch (error) {
     // Rollback quota
-    await User.updateOne(
-      { email: email, requestsThisMonth: { $gt: 0 } },
-      { $inc: { requestsThisMonth: -1 } }
-    );
+    if (refundGuard) {
+      await refundGuard.refund();
+    } else {
+      await User.updateOne(
+        { email: email, requestsThisMonth: { $gt: 0 } },
+        { $inc: { requestsThisMonth: -1 } }
+      );
+    }
     if (error instanceof ApiError) {
       throw error;
     }
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Generation failed!");
   }
 };
+
 
 const aiFreeModelGenerate = async (payload: IAIModel) => {
   try {
