@@ -124,7 +124,12 @@ function App() {
           element={
             <ProtectedRoute
               element={<DashboardLayout />}
-              allowedRoles={[USER_ROLE.ADMIN]}
+              allowedRoles={[
+                USER_ROLE.USER,
+                USER_ROLE.ADMIN,
+                USER_ROLE.SUPER_ADMIN,
+                USER_ROLE.WRITER,
+              ]}
             />
           }
         >
