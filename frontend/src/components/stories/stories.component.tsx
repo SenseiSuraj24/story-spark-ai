@@ -38,7 +38,7 @@ const StoriesComponent = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { register, handleSubmit, reset, setValue } = useForm<Inputs>();
-  const [stories, setStories] = useState<IStories[]>([]);
+  const [stories, setStories] = useState<IStories[]>([{uuid:"test-1",title:"The Wizard's Journey",content:"Merlin walked through the forest toward the castle. The village was far behind him. He crossed the bridge over the river and entered the dungeon beneath the tower. Dragons guarded the mountain beyond the valley. Elena watched from the palace window as Merlin approached the cave near the ocean shore.",tag:"Fantasy",imageURL:"https://via.placeholder.com/400x300"}]);
   const [loading, setLoading] = useState<boolean>(false);
   const { data } = useGetProfileInfoQuery(undefined);
   const userRole = getUserInfo();
@@ -57,6 +57,7 @@ const StoriesComponent = () => {
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const activeGenerationRef = useRef<{ abort: () => void } | null>(null);
+  const isGenerationInProgressRef = useRef(false);
   const [guestRequestCount, setGuestRequestCount] = useState<number>(() =>
     parseInt(localStorage.getItem("guestRequestCount") || "0", 10),
   );
@@ -116,7 +117,7 @@ const StoriesComponent = () => {
   }, []);
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
-    if (loading) {
+    if (isGenerationInProgressRef.current) {
       return;
     }
 
@@ -135,6 +136,7 @@ const StoriesComponent = () => {
       );
       return;
     }
+    isGenerationInProgressRef.current = true;
     setLoading(true);
 
     try {
@@ -172,6 +174,7 @@ const StoriesComponent = () => {
       }
     } finally {
       activeGenerationRef.current = null;
+      isGenerationInProgressRef.current = false;
       setLoading(false);
     }
   };
@@ -179,6 +182,7 @@ const StoriesComponent = () => {
   const handleCancelGeneration = () => {
     activeGenerationRef.current?.abort();
     activeGenerationRef.current = null;
+    isGenerationInProgressRef.current = false;
     setLoading(false);
     toast("Story generation cancelled.");
   };
@@ -473,11 +477,13 @@ const StoriesComponent = () => {
       <button
         type="submit"
         disabled={loading || isOverLimit}
+        aria-busy={loading}
+        aria-disabled={loading || isOverLimit}
         className={`rounded-lg bg-gradient-to-r from-blue-400 to-indigo-500 text-gray-200 px-6 py-3 font-semibold ${
           loading || isOverLimit
             ? "opacity-50 cursor-not-allowed"
-            : "hover:shadow-lg hover:shadow-indigo-500/50"
-        } transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 group cursor-pointer`}
+            : "cursor-pointer hover:shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
+        } transition-all duration-300 transform flex items-center space-x-2 group`}
       >
         <i className="fas fa-wand-magic-sparkles text-xl transition-transform duration-300 group-hover:animate-wiggle"></i>
         {loading ? "Generating..." : "Generate"}
