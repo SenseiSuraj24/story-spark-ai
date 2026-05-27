@@ -62,6 +62,8 @@ const FooterComponent = () => {
     { label: "Cookies",            to: "/cookies"        },
   ];
 
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="relative w-full bg-gradient-to-b from-[#090F24] via-[#080E22] to-[#060A18] overflow-hidden">
       <div
@@ -228,7 +230,7 @@ const FooterComponent = () => {
 
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-slate-400/80">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2.5 gap-y-1">
-            <span>&copy; 2025 StorySparkAI. All rights reserved.</span>
+            <span className="text-slate-400/80">&copy; {currentYear} StorySparkAI. All rights reserved.</span>
             <span className="hidden sm:inline text-white/[0.12]">|</span>
             <span className="italic text-slate-400/60">Crafted for storytellers</span>
           </div>
