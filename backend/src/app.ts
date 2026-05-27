@@ -24,20 +24,26 @@ const corsOrigins =
 // Middleware
 app.use(
   cors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      if (!origin || corsOrigins.includes(origin)) {
+        callback(null, true);
+      }else{
+        callback(new Error("Blocked by Cross-Origin Resource Sharing (CORS) Policy"));
     credentials: true,
+     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Cookie"], 
   })
 );
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Routes
 app.use("/api/v1", Routers);
 
 // Global error handler
-app.use((req: Request, res: Response) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   res.status(httpStatus.NOT_FOUND).json({
     success: false,
     message: "Not Found",
