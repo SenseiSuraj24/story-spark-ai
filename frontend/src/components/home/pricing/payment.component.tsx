@@ -9,6 +9,19 @@ import {
 
 import { loadRazorpayScript } from "../../../utils/loadRazorpay";
 
+interface RazorpayResponse extends Record<string, unknown> {
+  error?: string;
+}
+
+interface RazorpayInstance {
+  on(event: string, callback: (response: RazorpayResponse) => void): void;
+  open(): void;
+}
+
+interface RazorpayWindow extends Window {
+  Razorpay: new (options: Record<string, unknown>) => RazorpayInstance;
+}
+
 const PaymentComponent = () => {
   // Read selected plan from pricing page
   const [searchParams] = useSearchParams();
@@ -54,7 +67,7 @@ const PaymentComponent = () => {
         description: `${planName} Subscription`,
         order_id: data.order.id,
 
-        handler: async (response: any) => {
+        handler: async (response: RazorpayResponse) => {
           try {
             // Verify payment
             const verifyRes = await fetch("/api/v1/payment/verify", {
@@ -89,9 +102,9 @@ const PaymentComponent = () => {
         },
       };
 
-      const paymentObject = new (window as any).Razorpay(options);
+      const paymentObject = new (window as unknown as RazorpayWindow).Razorpay(options as Record<string, unknown>);
 
-      paymentObject.on("payment.failed", function (response: any) {
+      paymentObject.on("payment.failed", function (response: RazorpayResponse) {
         console.error(response.error);
         alert("Payment failed.");
       });

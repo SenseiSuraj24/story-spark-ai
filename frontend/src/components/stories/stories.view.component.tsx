@@ -452,7 +452,7 @@ const StoriesViewComponentInner: React.FC<StoriesComponentProps> = ({
       };
 
       let logoImg: HTMLImageElement | null = null;
-      try { logoImg = await loadImageWithTimeout(logo); } catch (err) { /* logo is non-critical */ }
+      try { logoImg = await loadImageWithTimeout(logo); } catch { /* logo is non-critical */ }
 
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const title = selectedStory.title || "Untitled Story";
@@ -529,7 +529,7 @@ const StoriesViewComponentInner: React.FC<StoriesComponentProps> = ({
       doc.save(`${safeTitle}.pdf`);
       toast.dismiss(toastId);
       toast.success("Premium PDF downloaded!");
-    } catch (error) {
+    } catch {
       toast.dismiss(toastId);
       toast.error("Failed to export PDF.");
     }
