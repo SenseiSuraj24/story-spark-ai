@@ -1,12 +1,72 @@
-return (
-  <header className="sticky top-0 z-50 w-full bg-white/90 supports-[backdrop-filter]:bg-white/75 dark:bg-[#0B1120]/80 dark:supports-[backdrop-filter]:bg-[#0B1120]/70 backdrop-blur-md border-b border-slate-200/70 dark:border-white/10 transition-colors duration-300 transform-gpu">
-    <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
+import { useState, useEffect, useRef } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import logo from "../../assets/logo.png";
+import { isLoggedIn, removeUserInfo, getUserInfo } from "../../services/auth.service";
+import ThemeToggle from "../theme/theme_toggle.component";
+import NotificationComponent from "../notification/notification.component";
+import { useNotifications } from "../../hooks/useNotifications";
+import { USER_ROLE } from "../../constants/role";
+
+const NavListComponent = () => {
+  const navigate = useNavigate();
+  const [isLogin, setIsLogin] = useState(isLoggedIn());
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const user = getUserInfo();
+  const isAdmin = user?.role === USER_ROLE.ADMIN || user?.role === USER_ROLE.SUPER_ADMIN;
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const { notifications, unreadCount, markAsRead, isOpen, toggle, close } = useNotifications();
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+
+  const handelLogout = () => {
+    removeUserInfo();
+    setIsLogin(false);
+    navigate("/");
+  };
+
+  const getLinkClass = (isActive: boolean) =>
+    `relative flex flex-col items-center justify-center gap-1.5 h-12 px-4 rounded-xl text-[10px] font-extrabold tracking-[0.15em] transition-all duration-300 ${
+      isActive
+        ? "text-blue-600 bg-blue-50/50 dark:bg-white/5 dark:text-blue-400"
+        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
+    }`;
+
+  const getMobileLinkClass = (isActive: boolean) =>
+    `flex items-center w-full min-h-12 rounded-xl px-4 py-2.5 text-base font-semibold leading-tight transition-all duration-300 ${
+      isActive
+        ? "bg-blue-50/80 text-blue-600 dark:bg-white/10 dark:text-blue-400"
+        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+    }`;
+
+  const renderMobileNavContent = (label: string, isActive: boolean) => (
+    <>
+      <span className="flex-1 text-left truncate">{label}</span>
+      {isActive && <div className="h-2 w-2 shrink-0 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6] ml-3"></div>}
+    </>
+  );
+
+  return (
+  <header className={`fixed top-0 z-50 w-full transition-all duration-500 transform-gpu ${
+    isScrolled 
+      ? "bg-white/70 dark:bg-slate-950/60 backdrop-blur-2xl shadow-[0_4px_30px_rgba(0,0,0,0.05)] border-b border-slate-200/50 dark:border-white/10 py-2" 
+      : "bg-transparent py-4"
+  }`}>
+    <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between w-full gap-2">
 
         {/* Logo */}
         <div className="flex items-center shrink-0">
-          <Link to="/">
-            <img src={logo} alt="logo" className="h-9 w-auto object-contain" />
+          <Link to="/" className="group relative">
+            <div className="absolute -inset-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg opacity-0 group-hover:opacity-20 blur-lg transition duration-500"></div>
+            <img src={logo} alt="logo" className="h-9 w-auto object-contain relative" />
           </Link>
         </div>
 
@@ -236,4 +296,7 @@ return (
       )}
     </div>
   </header>
-);
+  );
+};
+
+export default NavListComponent;

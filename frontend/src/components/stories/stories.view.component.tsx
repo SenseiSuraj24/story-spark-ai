@@ -1,12 +1,9 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { lazy, Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { getShortenedText, ITopicData, topicsData, getWordCount, SELECTED_TOPIC_CLASSES } from "./stories.utils";
 import toast, { Toaster } from "react-hot-toast";
 import { useCreatePostMutation, useDeletePostMutation } from "../../redux/apis/post.api";
 import { useGetProfileInfoQuery } from "../../redux/apis/user.api";
-import jsPDF from "jspdf";
-import StoryWorldMap from "../story-map/StoryWorldMap";
-import StoryRemix from "../remix/StoryRemix";
-import StoryTranslator from "../translate/StoryTranslator";
+// jsPDF is ~500KB — dynamically imported only when user clicks "Export PDF"
 import BookmarkButton from "../BookmarkButton";
 import logo from "../../assets/logoNew.png";
 import StoryGeneratingAnimation from "../loading/story-generating-animation.component";
@@ -19,6 +16,14 @@ import {
   useGenerateAlternateEndingsMutation,
   useGenerateFreeAlternateEndingsMutation,
 } from "../../redux/apis/ai.model.api";
+
+// ── Feature modals — lazy-loaded, only mount when user opens them ────────────
+const StoryWorldMap  = lazy(() => import("../story-map/StoryWorldMap"));
+const StoryRemix     = lazy(() => import("../remix/StoryRemix"));
+const StoryTranslator = lazy(() => import("../translate/StoryTranslator"));
+
+// ── Alternate ending tab names (module-level constant, not re-created per render) ──
+const ENDING_TABS = ["Happy Ending", "Dark Ending", "Plot Twist Ending", "Open Ending", "Cliffhanger Ending"] as const;
 
 // ─── StoryCoverImage ────────────────────────────────────────────────────────
 
@@ -249,7 +254,7 @@ const buildSentenceSegments = (content: string): StorySentenceSegment[] => {
   return segments;
 };
 
-const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
+const StoriesViewComponentInner: React.FC<StoriesComponentProps> = ({
   stories,
   isLogin,
   setStories,
@@ -428,10 +433,13 @@ const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
     }
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = useCallback(async () => {
     if (!selectedStory) { toast.error("No story available to export."); return; }
     const toastId = toast.loading("Preparing your premium PDF...");
     try {
+      // Dynamic import — jsPDF (~500KB) only loads when user actually clicks Export PDF
+      const { default: jsPDF } = await import("jspdf");
+
       const loadImageWithTimeout = (src: string, timeoutMs: number = 3000): Promise<HTMLImageElement> => {
         return new Promise((resolve, reject) => {
           const img = new Image();
@@ -444,7 +452,7 @@ const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
       };
 
       let logoImg: HTMLImageElement | null = null;
-      try { logoImg = await loadImageWithTimeout(logo); } catch (err) { console.warn("Failed to load logo", err); }
+      try { logoImg = await loadImageWithTimeout(logo); } catch (err) { /* logo is non-critical */ }
 
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const title = selectedStory.title || "Untitled Story";
@@ -522,9 +530,10 @@ const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
       toast.dismiss(toastId);
       toast.success("Premium PDF downloaded!");
     } catch (error) {
-      console.error(error); toast.dismiss(toastId); toast.error("Failed to export PDF.");
+      toast.dismiss(toastId);
+      toast.error("Failed to export PDF.");
     }
-  };
+  }, [selectedStory]);
 
   const handleExportMarkdown = () => {
     if (!selectedStory) { toast.error("No story available to export."); return; }
@@ -588,10 +597,6 @@ const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
 
   return (
     <div className="mt-16 px-4 sm:px-6 lg:px-8 max-w-8xl mx-auto pb-10">
-      <style>{`
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
-      `}</style>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in-up">
         {/* ── Left column ── */}
@@ -771,7 +776,7 @@ const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
                 ) : endingsCache[selectedStory.uuid]?.length > 0 ? (
                   <div>
                     <div className="flex border-b border-slate-700/50 mb-6 overflow-x-auto whitespace-nowrap scrollbar-none">
-                      {["Happy Ending", "Dark Ending", "Plot Twist Ending", "Open Ending", "Cliffhanger Ending"].map((name) => {
+                      {ENDING_TABS.map((name) => {
                         const endingData = (endingsCache[selectedStory.uuid] || []).find((e) => e.style === name);
                         const isApplied = endingData && selectedStory.content === endingData.fullStory;
                         return (
@@ -879,19 +884,32 @@ const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
       </div>
 
       {showRemix && selectedStory && (
-        <StoryRemix
-          story={selectedStory}
-          isLogin={isLogin}
-          onRemixComplete={(remixedStory) => { setStories([remixedStory, ...stories]); setSelectedStory(remixedStory); setShowRemix(false); }}
-          onClose={() => setShowRemix(false)}
-        />
+        <Suspense fallback={null}>
+          <StoryRemix
+            story={selectedStory}
+            isLogin={isLogin}
+            onRemixComplete={(remixedStory) => { setStories([remixedStory, ...stories]); setSelectedStory(remixedStory); setShowRemix(false); }}
+            onClose={() => setShowRemix(false)}
+          />
+        </Suspense>
       )}
       {showWorldMap && selectedStory && (
-        <StoryWorldMap story={selectedStory.content} title={selectedStory.title} onClose={() => setShowWorldMap(false)} />
+        <Suspense fallback={null}>
+          <StoryWorldMap story={selectedStory.content} title={selectedStory.title} onClose={() => setShowWorldMap(false)} />
+        </Suspense>
+      )}
+      {showTranslator && selectedStory && (
+        <Suspense fallback={null}>
+          <StoryTranslator story={selectedStory} isLogin={isLogin} onClose={() => setShowTranslator(false)} />
+        </Suspense>
       )}
       <Toaster position="top-right" reverseOrder={false} />
     </div>
   );
 };
+
+// React.memo prevents re-renders when parent StoriesComponent re-renders
+// for unrelated state changes (e.g., prompt text typing)
+const StoriesViewComponent = React.memo(StoriesViewComponentInner);
 
 export default StoriesViewComponent;

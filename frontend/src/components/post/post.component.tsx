@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import ExploreViewListComponent from "./post.view.list.component";
 import ExploreFeatureComponent from "./post.feature.component";
 import { Link } from "react-router-dom";
@@ -60,14 +60,19 @@ const ExploreComponent = () => {
     setPage(1);
   };
 
-  const availableTags = Array.from(
-    new Set(
-      (data?.posts || [])
-        .map((post: Post) => post.tag)
-        .filter(Boolean)
-        .map((tag: string) => `#${tag.toLowerCase().trim()}`),
-    ),
-  ).slice(0, 8);
+  // Memoized: only recomputes when data.posts changes (not on every render)
+  const availableTags = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (data?.posts || [])
+            .map((post: Post) => post.tag)
+            .filter(Boolean)
+            .map((tag: string) => `#${tag.toLowerCase().trim()}`),
+        ),
+      ).slice(0, 8),
+    [data?.posts],
+  );
 
   const availableGenres = ["Fantasy", "Science Fiction", "Mystery", "Romance"];
 
