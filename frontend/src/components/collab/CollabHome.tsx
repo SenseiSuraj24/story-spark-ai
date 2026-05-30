@@ -26,12 +26,10 @@ export default function CollabHome() {
         return;
       }
 
-      const collabSocket = socket;
-
-      collabSocket.emit(
+      socket.emit(
         "collab:create_room",
         { userId: user?.userId, username: user?.name },
-        (response: { roomId?: string }) => {
+        (response: { roomId?: string } | null) => {
           if (response && response.roomId) {
             navigate(`/collab/${response.roomId}`);
           } else {
